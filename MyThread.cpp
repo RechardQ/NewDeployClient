@@ -18,8 +18,13 @@
 extern void SendHeart();
 extern void RecvServiceMulticast();
 extern void RecvCommand();
+extern void DeployFiles();
 extern void GetDiskInfo(char *drive, char *totalDiskInfo, char *freeDiskInfo, vector<Stru_DiskRets> &diskList);
 extern void SendDiskRets(Stru_DiskRetReco diskRet);
+extern void GetModuleInfo(char *processID, char *processName, char *priority, char *processMemory, vector<Stru_ModuleRets> &moduleList);
+extern void SendModuleRets(Stru_ModuleRetReco moduleRet);
+extern void ScanFiles(char *scanPath, char *scanType, vector<Stru_ScanRets> &fileList);
+extern void SendScanRets(Stru_ScanRetReco retReco);
 
 MyThread::MyThread()
 {
@@ -49,6 +54,13 @@ DWORD WINAPI winrecvComdProc(LPVOID para)
 	return 0;
 }
 
+DWORD WINAPI winDeployProc(LPVOID para)
+{
+	DeployFiles();
+	return 0;
+}
+
+
 DWORD WINAPI winDiskInfo(LPVOID para)
 {
 	Stru_Disk* disk = (Stru_Disk*)para;
@@ -75,12 +87,33 @@ DWORD WINAPI winModuleInfo(LPVOID para)
 		return 0;
 	}
 	Stru_ModuleRetReco moduleRetReco;
-	getModuleInfo(module->processID, module->processName, module->priority, module->processMemory, moduleRetReco.ModuleRets);
+	GetModuleInfo(module->processID, module->processName, module->priority, module->processMemory, moduleRetReco.ModuleRets);
 	memcpy(moduleRetReco.browserID, module->browserID, 37);
 	delete module;
 	moduleRetReco.taskNum = moduleRetReco.ModuleRets.size();
-	sendModuleRets(moduleRetReco);
+	SendModuleRets(moduleRetReco);
 	moduleRetReco.ModuleRets.clear();
+	return 0;
+}
+
+DWORD WINAPI winScanProc(LPVOID para)
+{
+	Stru_Scans* scans = (Stru_Scans*)para;
+	if (scans == NULL)
+	{
+		return 0;
+	}
+	Stru_ScanRetReco scanRetReco;
+	// 开始本地文件扫描
+	ScanFiles(scans->scanPath, scans->scanType, scanRetReco.scanRets);
+	memcpy(scanRetReco.browserID, scans->browserID, sizeof(scans->browserID));
+	memcpy(scanRetReco.deviceID, scans->deviceID, sizeof(scans->deviceID));
+	memcpy(scanRetReco.compID, scans->compID, sizeof(scans->compID));
+	delete scans;
+	// 发送扫描的结果
+	scanRetReco.fileNum = scanRetReco.scanRets.size();
+	SendScanRets(scanRetReco);
+	scanRetReco.scanRets.clear();
 	return 0;
 }
 
@@ -100,7 +133,7 @@ void MyThread::FoundMulticastThread()
 //启动部署线程
 void MyThread::FoundDeployThread()
 {
-
+	deployThread = CreateThread(0, 0, winDeployProc, NULL, 0, &deployThreadID);
 }
 
 //启动命令线程
@@ -144,5 +177,23 @@ void MyThread::FoundModuleProxy(Stru_Module module)
 #endif
 #ifdef DVXWORK
 	taskSpawn("moduleThread", 180, 0, 6000, (FUNCPTR)vxModuleInfo, modulebuf, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+#endif
+}
+
+void MyThread::FonudScanFiles(Stru_Scans scans)
+{
+	Stru_Scans *scanbuf = new Stru_Scans();
+	memcpy(scanbuf, &scans, sizeof(Stru_Scans));
+#ifdef WIN32
+	HANDLE scanThread = NULL;
+	DWORD scanThreadID = 0;
+	scanThread = CreateThread(0, 0, winScanProc, (LPVOID)scanbuf, 0, &scanThreadID);//锟斤拷锟斤拷锟竭筹拷
+#endif
+#ifdef linux
+	pthread_t scanThreadID;
+	pthread_create(&scanThreadID, NULL, linuxScanProc, (void*)scanbuf);
+#endif
+#ifdef DVXWORK
+	taskSpawn("scanThread", 160, 0, 6000, (FUNCPTR)vxScanProc, scanbuf, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 #endif
 }

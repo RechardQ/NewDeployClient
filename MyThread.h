@@ -37,5 +37,7 @@ public:
 	void FoundDiskThread(Stru_Disk);
 	//创建扫描进程线程
 	void FoundModuleProxy(Stru_Module);
+	//创建文件扫描线程
+	void FonudScanFiles(Stru_Scans);
 };
 

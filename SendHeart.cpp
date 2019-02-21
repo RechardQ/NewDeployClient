@@ -263,6 +263,7 @@ double downstreamSpeed()
 	return dwStreamIn;
 }
 
+//·¢ËÍĞÄÌø
 void SendHeart()
 {
 #ifdef WIN32

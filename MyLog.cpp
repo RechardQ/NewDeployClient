@@ -165,3 +165,76 @@ int MyLog::my_mkdir(char *pszDir)
 #endif
 }
 
+// 获得当前文件的文件路径 返回值  返回参数中文件的路径  其中filepath不含最后的\\信息
+bool MyLog::find_last_of(char* absfile, char *filepath, int &len)
+{
+	int findindex = -1;
+	for (int i = 0; i < (int)strlen(absfile); i++)
+	{
+		if (absfile[i] == '\\' || absfile[i] == '/') // 找到\\字符串了
+		{
+			findindex = i;
+			continue;
+		}
+	}
+	if (findindex == -1)
+		return false;
+	else
+	{
+		if (filepath == NULL)
+		{
+			filepath = new char[strlen(absfile)];
+			memset(filepath, 0, strlen(absfile));
+		}
+		memcpy(filepath, absfile, findindex);
+		return true;
+	}
+	return false;
+}
+
+
+
+// source内容以,分隔，查找innerbuf是否在buffer内容中，如果是返回对应的位置，否则返回-1值
+int MyLog::findIndex(char *source, char *innerbuf)
+{
+	string buffer(source);
+	// 首先按照,对buffer进行分隔，放到链表当中
+	vector<string> sourcelist;
+	size_t pos = 0, found = 0;
+	while (found != string::npos)
+	{
+		found = buffer.find(",", pos);
+		sourcelist.push_back(string(buffer, pos, found - pos));
+		pos = found + 1;
+	}
+	// 分析innerbuf是否在source中
+	for (int i = 0; i < (int)sourcelist.size(); i++)
+	{
+		if (strcmp(sourcelist[i].c_str(), innerbuf) == 0)
+		{
+			// 找到对应的内容
+			return i + 1;
+		}
+	}
+	return -1;
+}
+
+
+// 判断文件filename是否为type类型 多个后缀类型以,分隔
+bool MyLog::decFileName(char *fileName, char *fileType)
+{
+	if (fileName == 0 || fileType == 0)
+		return false;
+	int len = strlen(fileName);
+	for (int i = 0; i < len; i++)
+	{
+		if (fileName[i] == '.'&&i != (len - 1))
+		{
+			char type[40];
+			memcpy(&type, &fileName[i + 1], len - i + 1);
+			if (findIndex(fileType, type) > 0)
+				return true;
+		}
+	}
+	return false;
+}

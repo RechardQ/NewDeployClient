@@ -152,19 +152,24 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="DeployFiles.cpp" />
+    <ClCompile Include="HandleCourse.cpp" />
     <ClCompile Include="HandleDisk.cpp" />
+    <ClCompile Include="md5.cpp" />
     <ClCompile Include="MyLog.cpp" />
     <ClCompile Include="MyThread.cpp" />
     <ClCompile Include="MyTime.cpp" />
     <ClCompile Include="NewDeployClient.cpp" />
     <ClCompile Include="RecvCommand.cpp" />
     <ClCompile Include="RecvServiceMulticast.cpp" />
+    <ClCompile Include="ScanFiles.cpp" />
     <ClCompile Include="SendHeart.cpp" />
     <ClCompile Include="stringz.cpp" />
     <ClCompile Include="Unicode_UTF.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Header.h" />
+    <ClInclude Include="md5.h" />
     <ClInclude Include="MyLog.h" />
     <ClInclude Include="MyThread.h" />
     <ClInclude Include="MyTime.h" />

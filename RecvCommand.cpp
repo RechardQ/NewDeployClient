@@ -74,7 +74,7 @@ void RecvCommand()
 			// 获得扫描路径
 			memcpy(scans.scanPath, recvline + index, sizeof(scans.scanPath));
 			printf("the scans Path:%s\n", scans.scanPath);
-			//scanFilesProxy(scans);
+			m_thread.FonudScanFiles(scans);
 		}
 		if (strcmp(sign, "S103") == 0) // 表示根据指定类型扫描
 		{
@@ -94,7 +94,7 @@ void RecvCommand()
 			memcpy(scans.scanType, recvline + index, sizeof(scans.scanType));
 			index += sizeof(scans.scanType);
 			memcpy(scans.scanPath, recvline + index, sizeof(scans.scanPath));
-			//scanFilesProxy(scans);
+			m_thread.FonudScanFiles(scans);
 		}
 		if (strcmp(sign, "S105") == 0)
 		{
@@ -112,7 +112,7 @@ void RecvCommand()
 			Stru_Module module;
 			int dex = 5;
 			memcpy(&module, recvline + dex, sizeof(Stru_Module));
-			//ModuleProxy(module);
+			m_thread.FoundModuleProxy(module);
 
 		}
 		if (strcmp(sign, "S106") == 0)

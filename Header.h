@@ -324,4 +324,43 @@ struct Stru_DiskRetReco
 	}
 };
 
+//部署结构体
+struct DeployPackageEntity
+{
+	//序列号，0表示需要校验MD5，查看文件是否已传，正常传输从1开始
+	int serialNum;
+	//文件路径
+	char targetPath[256];
+	//MD5值
+	char MD5Value[34];
+	//单个数据包长度
+	int dataSize;
+	//包总大小
+	long long totalSize;
+	//正文
+	char* data;
+	DeployPackageEntity(int serialNum, char *targetPath, char *MD5Value)
+	{
+		this->serialNum = serialNum;
+		memcpy(this->targetPath, targetPath, 128);
+		memcpy(this->MD5Value, MD5Value, 34);
+	}
+	DeployPackageEntity(int serialNum, int dataSize, long long totalSize, char* data)
+	{
+		this->serialNum = serialNum;
+		this->dataSize = dataSize;
+		this->totalSize = totalSize;
+		this->data = (char*)malloc(this->dataSize);
+		memcpy(this->data, data, this->dataSize);
+	}
+};
+
+struct HeadPacket
+{
+	int serialNum;				//序列号
+	int dataSize;				//单步长度
+	long long int totalSize;	//总长度
+};
+
+
 #endif //_HEADER_H

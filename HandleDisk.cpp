@@ -4,7 +4,6 @@ char* UnicodeToUTF8(const char* src, int srclen, int &len);
 extern bool g_progFlag;
 extern char serverIP[15];
 
-
 string TCHAR2STRING(TCHAR *STR)
 {
 	int iLen = WideCharToMultiByte(CP_ACP, 0, STR, -1, NULL, 0, NULL, NULL);
