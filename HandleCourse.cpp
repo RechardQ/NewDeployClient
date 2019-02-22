@@ -99,11 +99,9 @@ void GetModuleInfo(char *processID, char *processName, char *priority, char *pro
 		}
 	}
 	_pclose(fp);
-
 #endif
-#ifdef linux
+#ifdef LINUX
 	Stru_ModuleRets moduleRets;
-	int i = 0;
 	FILE* fp;
 	char szTest[1024];
 	string temp;
@@ -128,7 +126,7 @@ void GetModuleInfo(char *processID, char *processName, char *priority, char *pro
 	}
 	pclose(fp);
 #endif
-#ifdef VXWORKS
+#ifdef DVXWORK
 	Stru_ModuleRets moduleRets;
 	DWORD aProcesses[1024], cbNeeded, cProcesses;
 	unsigned int i;
@@ -197,34 +195,41 @@ void SendModuleRets(Stru_ModuleRetReco moduleRet)
 				for (int i = 0; i < moduleRet.taskNum; i++)
 				{
 					memcpy(modulebuf + index, moduleRet.ModuleRets[i].processID, sizeof(moduleRet.ModuleRets[i].processID));
-					//cout << "processID " << moduleRet.ModuleRets[i].processID << "        ";
 					index += sizeof(moduleRet.ModuleRets[i].processID);
 					memcpy(modulebuf + index, moduleRet.ModuleRets[i].processName, sizeof(moduleRet.ModuleRets[i].processName));
-					//cout << moduleRet.ModuleRets[i].processName << "           ";
 					index += sizeof(moduleRet.ModuleRets[i].processName);
 					memcpy(modulebuf + index, moduleRet.ModuleRets[i].priority, sizeof(moduleRet.ModuleRets[i].priority));
-					//cout << moduleRet.ModuleRets[i].priority << "          ";
 					index += sizeof(moduleRet.ModuleRets[i].priority);
 					memcpy(modulebuf + index, moduleRet.ModuleRets[i].processMemory, sizeof(moduleRet.ModuleRets[i].processMemory));
-					//cout << moduleRet.ModuleRets[i].processMemory << endl;
 					index += sizeof(moduleRet.ModuleRets[i].processMemory);
 				}
-				//m_time.CoutTime();
 				int ret = send(client, (const char*)modulebuf, len, 0);
-				//m_time.CoutTime();
+#ifdef WIN32
 				cout << "发送进程信息成功" << endl;
-
+#endif
+#ifdef LINUX
+				cout << "发送进程信息成功" << endl;
+#endif
+#ifdef DVXWORK
+				logMsg("send ModuleRets\n", 0, 0, 0, 0, 0, 0);
+#endif
 				if (ret < 0)
 				{
-					printf("发送进程信息失败\n");
+#ifdef WIN32
+					cout << "发送进程信息失败" << endl;
+#endif
+#ifdef LINUX
+					cout << "发送进程信息失败" << endl;
+#endif
+#ifdef DVXWORK
+					logMsg("send ModuleRets failed\n", 0, 0, 0, 0, 0, 0);
+#endif
 					//writeLog("send ModuleRets failed.\n");
 				}
 				delete modulebuf;
 			}
-
 		}
 	}
-
 #ifdef WIN32
 	closesocket(client);
 	WSACleanup();

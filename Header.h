@@ -194,11 +194,11 @@ struct Stru_Scans
 // 返回进程信息结构体
 struct Stru_Module
 {
-	char browserID[37];					//申请ID
-	char processID[5];					//进程ID
+	char priority[8];					//优先级
 	char processName[128];				//进程名称
-	char priority[8];					//优先级	
 	char processMemory[8];
+	char processID[5];					//进程ID
+	char browserID[37];					//申请ID
 	Stru_Module()
 	{
 		memset(browserID, 0, 37);

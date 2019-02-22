@@ -26,6 +26,7 @@ extern void SendModuleRets(Stru_ModuleRetReco moduleRet);
 extern void ScanFiles(char *scanPath, char *scanType, vector<Stru_ScanRets> &fileList);
 extern void SendScanRets(Stru_ScanRetReco retReco);
 
+
 MyThread::MyThread()
 {
 }
@@ -35,7 +36,8 @@ MyThread::~MyThread()
 {
 }
 
-
+// 以下为windows线程函数
+#ifdef WIN32
 DWORD WINAPI winSendHeartProc(LPVOID para)
 {
 	SendHeart();
@@ -48,7 +50,7 @@ DWORD WINAPI winMulticastProc(LPVOID para)
 	return 0;
 }
 
-DWORD WINAPI winrecvComdProc(LPVOID para)
+DWORD WINAPI winRecvComdProc(LPVOID para)
 {
 	RecvCommand();
 	return 0;
@@ -59,9 +61,76 @@ DWORD WINAPI winDeployProc(LPVOID para)
 	DeployFiles();
 	return 0;
 }
+#endif
 
+// 以下为LINUX线程函数
+#ifdef LINUX
+void *LinuxSendHeartProc(void *argc)
+{
+	SendHeart();
+	pthread_exit(NULL);
+	return 0;
+}
 
+void *LinuxBroadCastProc(void *argc)
+{
+	RecvServiceMulticast();
+	pthread_exit(NULL);
+	return 0;
+}
+
+void *LinuxDeployProc(void *argc)
+{
+	DeployFiles();
+	pthread_exit(NULL);
+	return 0;
+}
+
+void *LinuxrecvComdProc(void *argc)
+{
+	RecvCommand();
+	pthread_exit(NULL);
+	return 0;
+}
+#endif
+
+//以下为Vxworks线程函数
+#ifdef DVXWORK
+void vxSendHeartProc(void *argc)
+{
+	SendHeart();
+	return;
+}
+
+void vxBroadCastProc(void *argc)
+{
+	RecvServiceMulticast();
+	return;
+}
+
+void vxDeployProc(void *argc)
+{
+	DeployFiles();
+	return;
+}
+
+void vxrecvComdProc(void *argc)
+{
+	RecvCommand();
+	return;
+}
+#endif
+
+// window线程，负责获取本地磁盘信息并发送结果
+#ifdef WIN32
 DWORD WINAPI winDiskInfo(LPVOID para)
+#endif
+#ifdef LINUX
+void* LINUXDiskInfo(void* info)
+#endif
+#ifdef DVXWORK
+void vxDiskInfo(void* info)
+#endif
 {
 	Stru_Disk* disk = (Stru_Disk*)para;
 	if (disk == NULL)
@@ -78,8 +147,16 @@ DWORD WINAPI winDiskInfo(LPVOID para)
 	return 0;
 }
 
-
+// window线程，负责获取本地进程信息并发送结果
+#ifdef WIN32
 DWORD WINAPI winModuleInfo(LPVOID para)
+#endif
+#ifdef LINUX
+void* LINUXModuleInfo(void* info)
+#endif
+#ifdef DVXWORK
+void vxModuleInfo(void* info)
+#endif
 {
 	Stru_Module* module = (Stru_Module*)para;
 	if (module == NULL)
@@ -96,7 +173,16 @@ DWORD WINAPI winModuleInfo(LPVOID para)
 	return 0;
 }
 
+// window线程，负责扫描本地文件并发送扫描结果
+#ifdef WIN32
 DWORD WINAPI winScanProc(LPVOID para)
+#endif
+#ifdef LINUX
+void *LINUXScanProc(void *argc)
+#endif
+#ifdef DVXWORK
+void vxScanProc(void *argc)
+#endif
 {
 	Stru_Scans* scans = (Stru_Scans*)para;
 	if (scans == NULL)
@@ -121,28 +207,69 @@ DWORD WINAPI winScanProc(LPVOID para)
 //启动心跳线程
 void MyThread::FoundHeartThread()
 {
+#ifdef WIN32
 	heartThread = CreateThread(0, 0, winSendHeartProc, NULL, 0, &heartdwThreadID);
+#endif
+#ifdef LINUX
+	int ret;
+	pthread_t heartdwThreadID;
+	ret = pthread_create(&broadcastThreadID, NULL, LinuxBroadCastProc, NULL); // 启动发送心跳线程
+#endif
+#ifdef DVXWORK
+
+#endif
 }
 
 //启动组播线程
 void MyThread::FoundMulticastThread()
 {
+#ifdef WIN32
 	multicastThread = CreateThread(0, 0, winMulticastProc, NULL, 0, &multicastThreadID);
+#endif
+#ifdef LINUX
+	int ret;
+	pthread_t broadcastThreadID;
+	ret = pthread_create(&heartdwThreadID, NULL, LinuxSendHeartProc, NULL); // 启动接收广播线程
+#endif
+#ifdef DVXWORK
+
+#endif
 }
 
 //启动部署线程
 void MyThread::FoundDeployThread()
 {
+#ifdef WIN32
 	deployThread = CreateThread(0, 0, winDeployProc, NULL, 0, &deployThreadID);
+#endif
+#ifdef LINUX
+	int ret;
+	pthread_t deployThreadID;
+	ret = pthread_create(&deployThreadID, NULL, LinuxDeployProc, NULL); // 启动接收文件部署线程
+#endif
+#ifdef DVXWORK
+
+#endif
 }
 
 //启动命令线程
 void MyThread::FoundRecvOrderThread()
 {
-	recvComdThread = CreateThread(0, 0, winrecvComdProc, NULL, 0, &comdID);
+#ifdef WIN32
+	recvComdThread = CreateThread(0, 0, winRecvComdProc, NULL, 0, &comdID);
+#endif
+#ifdef LINUX
+	int ret;
+	pthread_t comdID;
+	ret = pthread_create(&comdID, NULL, LinuxrecvComdProc, NULL); // 启动接收命令线程
+#endif
+#ifdef DVXWORK
+
+#endif
 }
 
 
+//启动磁盘扫描线程
 void MyThread::FoundDiskThread(Stru_Disk disk)
 {
 	Stru_Disk *diskbuf = new Stru_Disk();
@@ -152,16 +279,16 @@ void MyThread::FoundDiskThread(Stru_Disk disk)
 	DWORD diskThreadID = 0;
 	diskThread = CreateThread(0, 0, winDiskInfo, (LPVOID)diskbuf, 0, &diskThreadID);
 #endif
-#ifdef linux
+#ifdef LINUX
 	pthread_t diskThreadID;
-	pthread_create(&diskThreadID, NULL, linuxDiskInfo, (void*)diskbuf);
+	pthread_create(&diskThreadID, NULL, LINUXDiskInfo, (void*)diskbuf);
 #endif
 #ifdef DVXWORK
-	taskSpawn("diskThread", 190, 0, 6000, (FUNCPTR)vxDiskInfo, diskbuf, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+	taskSpawn("diskThread", 190, 0, 6000, (FUNCPTR)vxDiskInfo, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 #endif
 }
 
-
+//启动进程扫描线程
 void MyThread::FoundModuleProxy(Stru_Module module)
 {
 	Stru_Module *modulebuf = new Stru_Module();
@@ -171,15 +298,16 @@ void MyThread::FoundModuleProxy(Stru_Module module)
 	DWORD moduleThreadID = 0;
 	moduleThread = CreateThread(0, 0, winModuleInfo, (LPVOID)modulebuf, 0, &moduleThreadID);
 #endif
-#ifdef linux
+#ifdef LINUX
 	pthread_t moduleThreadID;
-	pthread_create(&moduleThreadID, NULL, linuxModuleInfo, (void*)modulebuf);
+	pthread_create(&moduleThreadID, NULL, LINUXModuleInfo, (void*)modulebuf);
 #endif
 #ifdef DVXWORK
-	taskSpawn("moduleThread", 180, 0, 6000, (FUNCPTR)vxModuleInfo, modulebuf, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+	taskSpawn("moduleThread", 180, 0, 6000, (FUNCPTR)vxModuleInfo, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 #endif
 }
 
+//启动文件扫描线程
 void MyThread::FonudScanFiles(Stru_Scans scans)
 {
 	Stru_Scans *scanbuf = new Stru_Scans();
@@ -189,11 +317,11 @@ void MyThread::FonudScanFiles(Stru_Scans scans)
 	DWORD scanThreadID = 0;
 	scanThread = CreateThread(0, 0, winScanProc, (LPVOID)scanbuf, 0, &scanThreadID);//锟斤拷锟斤拷锟竭筹拷
 #endif
-#ifdef linux
+#ifdef LINUX
 	pthread_t scanThreadID;
-	pthread_create(&scanThreadID, NULL, linuxScanProc, (void*)scanbuf);
+	pthread_create(&scanThreadID, NULL, LINUXScanProc, (void*)scanbuf);
 #endif
 #ifdef DVXWORK
-	taskSpawn("scanThread", 160, 0, 6000, (FUNCPTR)vxScanProc, scanbuf, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+	taskSpawn("scanThread", 140, 0, 0x20000, (FUNCPTR)vxScanProc, (int)scanbuf, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 #endif
 }

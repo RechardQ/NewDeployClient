@@ -4,6 +4,7 @@ char* UnicodeToUTF8(const char* src, int srclen, int &len);
 extern bool g_progFlag;
 extern char serverIP[15];
 
+
 string TCHAR2STRING(TCHAR *STR)
 {
 	int iLen = WideCharToMultiByte(CP_ACP, 0, STR, -1, NULL, 0, NULL, NULL);
@@ -16,6 +17,7 @@ string TCHAR2STRING(TCHAR *STR)
 
 void GetDiskInfo(char *drive, char *totalDiskInfo, char *freeDiskInfo, vector<Stru_DiskRets> &diskList)
 {
+#ifdef WIN32
 	Stru_DiskRets diskRets;
 	int driveCount = 0;
 	char szDriveInfo[16 + 1] = { 0 };
@@ -73,7 +75,63 @@ void GetDiskInfo(char *drive, char *totalDiskInfo, char *freeDiskInfo, vector<St
 		diskList.push_back(diskRets);
 		lpDriveStr += 4;
 	}
+#endif
+#ifdef LINUX
+	Stru_DiskRets Rets;
+	FILE * fp;
+	char a[80], d[80], e[80], f[80], buf[256];
+	double c, b;
+	fp = popen("df", "r");
+	double dev_total = 0, dev_used = 0;
+	DEV_MEM  *dev = (DEV_MEM *)malloc(sizeof(DEV_MEM));
+
+	int i = 0;
+	while (!feof(fp))
+	{
+		fgets(buf, 256, fp); // leave out \n
+		fscanf(fp, "%s %lf %lf %s %s %s", a, &b, &c, d, e, f);
+		if (i == 7)
+		{
+			dev_total += b;
+			dev_used += c;
+		}
+		else
+		{
+
+		}
+		i++;
+	}
+	dev->total = dev_total / 1024 / 1024;
+	dev->used_rate = (dev_total - dev_used) / 1024 / 1024;
+	pclose(fp);
+
+	string tmp = "";
+	const char* temp = NULL;
+
+	strcpy(Rets.drive, ".host:/");
+
+	stringstream ttt;
+	ttt << dev->total;
+	ttt >> tmp;
+	ttt.str("");
+	temp = tmp.c_str();
+	memcpy(Rets.totalDiskInfo, temp, strlen(temp));
+	tmp = "";
+	temp = NULL;
+
+	stringstream fff;
+	fff << dev->used_rate;
+	fff >> tmp;
+	fff.str("");
+	temp = tmp.c_str();
+	memcpy(Rets.freeDiskInfo, temp, strlen(temp));
+	tmp = "";
+	temp = NULL;
+
+	diskList.push_back(Rets);
+#endif
 }
+
 
 // 通过tcp返回硬盘结果
 void SendDiskRets(Stru_DiskRetReco diskRet)
@@ -81,7 +139,6 @@ void SendDiskRets(Stru_DiskRetReco diskRet)
 #ifdef WIN32
 	WSADATA wsa;
 	WSAStartup(MAKEWORD(2, 2), &wsa); //initial Ws2_32.dll by a process
-
 #endif
 	int client;
 	bool flag = true;
@@ -122,10 +179,26 @@ void SendDiskRets(Stru_DiskRetReco diskRet)
 					index += sizeof(diskRet.DiskRets[i].freeDiskInfo);
 				}
 				int ret = send(client, (const char*)diskbuf, len, 0);
-				printf("发送磁盘信息成功\n");
+#ifdef WIN32
+				cout << "发送磁盘信息成功" << endl;
+#endif
+#ifdef LINUX
+				cout << "发送磁盘信息成功" << endl;
+#endif
+#ifdef DVXWORK
+				logMsg("send DiskRets\n", 0, 0, 0, 0, 0, 0);
+#endif
 				if (ret < 0)
 				{
-					printf("发送磁盘信息失败\n");
+#ifdef WIN32
+					cout << "发送磁盘信息成功" << endl;
+#endif
+#ifdef LINUX
+					cout << "发送磁盘信息成功" << endl;
+#endif
+#ifdef DVXWORK
+					logMsg("send DiskRets failed\n", 0, 0, 0, 0, 0, 0);
+#endif
 					//writeLog("send DiskRets failed.\n");
 				}
 				delete diskbuf;

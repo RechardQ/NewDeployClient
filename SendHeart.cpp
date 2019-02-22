@@ -269,7 +269,6 @@ void SendHeart()
 #ifdef WIN32
 	WSADATA wsa;
 	WSAStartup(MAKEWORD(2, 2), &wsa); //initial Ws2_32.dll by a process
-
 #endif
 	int client;
 	int preUsa;
@@ -277,11 +276,17 @@ void SendHeart()
 	client = socket(AF_INET, SOCK_DGRAM, 0);
 	if (client < 0)
 	{
-		cout << "socket error!";
+#ifdef WIN32
+		cout << "socket error!" << endl;
+#endif
+#ifdef LINUX
+		cout << "socket error!" << endl;
+#endif
+#ifdef DVXWORK
+		logMsg("socket error!\n", 0, 0, 0, 0, 0, 0);
+#endif
 		flag = false;
 	}
-
-
 	sockaddr_in hostInfo;
 	hostInfo.sin_family = AF_INET;
 	//hostInfo.sin_addr.s_addr = inet_addr("193.1.103.16");// htonl(INADDR_ANY);
@@ -431,10 +436,48 @@ void SendHeart()
 			}
 		}
 #endif
+#ifdef LINUX
+		if (strcmp(serverIP, "0.0.0.0") != 0) // 判断当前是否已获知服务器的IP地址
+		{
+
+			strcpy(heartbuf.cpuName, "0");
+			strcpy(heartbuf.cpuFreq, "0");
+			strcpy(heartbuf.cpuUsage, "0");
+			strcpy(heartbuf.decimal_total, "0");
+			strcpy(heartbuf.decimal_avl, "0");
+			server.sin_family = AF_INET;
+			server.sin_addr.s_addr = inet_addr(serverIP);
+			server.sin_port = htons(HEARTPORT);
+			ret = sendto(client, (char*)&heartbuf, sizeof(heartbuf), 0, (struct sockaddr*)&server, sizeof(struct sockaddr));
+			if (ret == -1)
+			{
+				printf("send heart error %d %s %s\n", -1, hostIP, serverIP);
+			}
+		}
+#endif
+#ifdef DVXWORK
+		if (strcmp(serverIP, "0.0.0.0") != 0) // 判断当前是否已获知服务器的IP地址
+		{
+
+			strcpy(heartbuf.cpuName, "0");
+			strcpy(heartbuf.cpuFreq, "0");
+			strcpy(heartbuf.cpuUsage, "0");
+			strcpy(heartbuf.decimal_total, "0");
+			strcpy(heartbuf.decimal_avl, "0");
+			server.sin_family = AF_INET;
+			server.sin_addr.s_addr = inet_addr(serverIP);
+			server.sin_port = htons(HEARTPORT);
+			ret = sendto(client, (char*)&heartbuf, sizeof(heartbuf), 0, (struct sockaddr*)&server, sizeof(struct sockaddr));
+			if (ret == -1)
+			{
+				printf("send heart error %d %s %s\n", -1, hostIP, serverIP);
+			}
+		}
+#endif
 #ifdef WIN32
 		Sleep(500); // 定时
 #endif
-#ifdef linux
+#ifdef LINUX
 		usleep(500000);
 #endif
 #ifdef DVXWORK

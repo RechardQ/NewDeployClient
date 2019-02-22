@@ -4,6 +4,7 @@
 
 extern bool g_progFlag;
 
+// 接收服务器发送的命令信息，包括扫描，部署指令
 void RecvCommand()
 {
 	int sockfd;
@@ -27,7 +28,6 @@ void RecvCommand()
 
 	saddr.sin_family = AF_INET;
 	saddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	//saddr.sin_addr.s_addr = inet_addr("193.1.103.16");
 	saddr.sin_port = htons(COMMAND);
 
 	if (flag == true && bind(sockfd, (struct sockaddr*)&saddr, sizeof(saddr)) < 0)
@@ -59,8 +59,15 @@ void RecvCommand()
 		if (strcmp(sign, "S102") == 0) // 表示全盘扫描
 		{
 			m_time.CoutTime();
-			cout << "收到的报文是：S102" << endl;
-			cout << "收到全盘扫描报文" << endl;
+#ifdef WIN32
+			cout << "收到全盘扫描报文:S102" << endl;
+#endif
+#ifdef LINUX
+			cout << "收到全盘扫描报文:S102" << endl;
+#endif
+#ifdef DVXWORK
+			logMsg("recv scan:S102\n", 0, 0, 0, 0, 0, 0);
+#endif
 			Stru_Scans scans;
 			int index = 4;
 			memcpy(scans.browserID, recvline + index, sizeof(scans.browserID));
@@ -79,8 +86,15 @@ void RecvCommand()
 		if (strcmp(sign, "S103") == 0) // 表示根据指定类型扫描
 		{
 			m_time.CoutTime();
-			cout << "收到的报文是：S103" << endl;
-			cout << "收到快速扫描报文" << endl;
+#ifdef WIN32
+			cout << "收到快速扫描报文:S103" << endl;
+#endif
+#ifdef LINUX
+			cout << "收到全盘扫描报文:S102" << endl;
+#endif
+#ifdef DVXWORK
+			logMsg("recv scan:S102\n", 0, 0, 0, 0, 0, 0);
+#endif
 			Stru_Scans scans;
 			int index = 4;
 			memcpy(scans.browserID, recvline + index, sizeof(scans.browserID));
@@ -99,7 +113,15 @@ void RecvCommand()
 		if (strcmp(sign, "S105") == 0)
 		{
 			m_time.CoutTime();
-			cout << "收到的报文是：S105" << endl;
+#ifdef WIN32
+			cout << "收到进程扫描报文:S105" << endl;
+#endif
+#ifdef LINUX
+
+#endif
+#ifdef DVXWORK
+
+#endif
 			Stru_Command com;
 			memset(com.command, 0, sizeof(com.command));
 			memset(com.sign, 0, sizeof(com.sign));
@@ -108,17 +130,33 @@ void RecvCommand()
 			memcpy(com.command, command, strlen(command));
 			index += sizeof(com.command);
 
-			cout << "收到获取进程信息报文" << endl;
 			Stru_Module module;
 			int dex = 5;
-			memcpy(&module, recvline + dex, sizeof(Stru_Module));
+			memcpy(module.browserID, recvline + dex, sizeof(module.browserID));
+			dex += sizeof(module.browserID);
+			memcpy(module.processID, recvline + dex, sizeof(module.processID));
+			dex += sizeof(module.processID);
+			memcpy(module.processName, recvline + dex, sizeof(module.processName));
+			dex += sizeof(module.processName);
+			memcpy(module.priority, recvline + dex, sizeof(module.priority));
+			dex += sizeof(module.priority);
+			memcpy(module.processMemory, recvline + dex, sizeof(module.processMemory));
+			dex += sizeof(module.processMemory);
 			m_thread.FoundModuleProxy(module);
 
 		}
 		if (strcmp(sign, "S106") == 0)
 		{
 			m_time.CoutTime();
-			cout << "收到的报文是：S106" << endl;
+#ifdef WIN32
+			cout << "收到磁盘扫描报文:S106" << endl;
+#endif
+#ifdef LINUX
+
+#endif
+#ifdef DVXWORK
+
+#endif
 			Stru_Command com;
 			memset(com.command, 0, sizeof(com.command));
 			memset(com.sign, 0, sizeof(com.sign));
@@ -127,7 +165,6 @@ void RecvCommand()
 			memcpy(com.command, command, strlen(command));
 			index += sizeof(com.command);
 
-			cout << "收到获取磁盘信息报文" << endl;
 			Stru_Disk disk;
 			int dex = 5;
 			memcpy(&disk, recvline + dex, sizeof(Stru_Disk));

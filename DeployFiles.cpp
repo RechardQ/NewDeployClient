@@ -11,13 +11,14 @@ extern char* UTF8ToUniCode(const char* utf8, int srclen, int &len);
 extern bool g_progFlag;
 extern char serverIP[15];
 
+//部署文件
 void DeployFiles()
 {
 	sockaddr_in addrSvr;
 #ifdef WIN32
 	int len = sizeof(sockaddr_in);
 #endif
-#ifdef linux
+#ifdef LINUX
 	socklen_t len = sizeof(sockaddr_in);
 #endif
 #ifdef DVXWORK
@@ -40,29 +41,27 @@ void DeployFiles()
 	service.sin_family = AF_INET;
 	service.sin_addr.s_addr = htonl(INADDR_ANY);
 	service.sin_port = htons(DEPLOYPORT);
-
-	/* 设置关闭时缓冲处理方式
-	struct linger opt;
-	opt.l_onoff=1;
-	opt.l_linger = 0;
-	if(flag==true && setsockopt(server, SOL_SOCKET, SO_LINGER, (char *)&opt, sizeof(linger)) < 0)
-	{
-	printf( "deploy setLINGER failed.\n" );
-	flag = false;
-	}
-	*/
-
 	int tcp_nodelay = 1;
 
 	if (setsockopt(server, SOL_SOCKET, SO_KEEPALIVE, (char*)&tcp_nodelay, sizeof(int)) < 0)
 	{
 		//writeLog("deploy set alive failed.\n");
 	}
+#ifdef WIN32
 	if (setsockopt(server, IPPROTO_TCP, TCP_NODELAY, (char*)&tcp_nodelay, sizeof(int)) < 0)
 	{
 		//writeLog("deploy set delay failed.\n");
 	}
+#endif
+#ifdef LINUX
+	if (setsockopt(server, IPPROTO_TCP, TCP_NODELAY, (char*)&tcp_nodelay, sizeof(int)) < 0)
+	{
+		//writeLog("deploy set delay failed.\n");
+	}
+#endif
+#ifdef DVXWORK
 
+#endif
 
 	if (flag == true && bind(server, (sockaddr *)&service, sizeof(sockaddr_in)) < 0)
 	{
@@ -71,14 +70,13 @@ void DeployFiles()
 #ifdef WIN32
 		Sleep(100); // 定时 
 #endif
-#ifdef linux
+#ifdef LINUX
 		usleep(100000);
 #endif
 #ifdef DVXWORK
 		slepp(1 / 10);
 #endif
 	}
-
 	// 监听 socket
 	int ls = listen(server, 5);
 	if (ls == -1)
@@ -96,7 +94,7 @@ void DeployFiles()
 #ifdef WIN32
 		int addrsize = sizeof(client);
 #endif
-#ifdef linux
+#ifdef LINUX
 		socklen_t addrsize = sizeof(client);
 #endif
 #ifdef DVXWORK
@@ -112,7 +110,6 @@ void DeployFiles()
 		int RecvLen;
 		char recvbuf[REVBUFSIZE] = ""; // 用于将接收的转换UTF8格式
 
-
 		while (1)
 		{
 			// 判断是否开始接收文件 收到DeployStart表示开始接收，DeployEnd
@@ -125,7 +122,15 @@ void DeployFiles()
 				if (errorCode == EWOULDBLOCK || errorCode == ETIMEDOUT)
 					continue;
 				else {
+#ifdef WIN32
 					cout << "ERROR>>>>>>>>>>>>>>>>>Client recv error！Has been exit recv_process." << endl;
+#endif
+#ifdef LINUX
+					cout << "ERROR>>>>>>>>>>>>>>>>>Client recv error！Has been exit recv_process." << endl;
+#endif
+#ifdef DVXWORK
+					logMsg("ERROR>>>>>>>>>>>>>>>>>Client recv error！Has been exit recv_process.\n", 0, 0, 0, 0, 0, 0);
+#endif	
 					break;
 				}
 			}
@@ -134,12 +139,19 @@ void DeployFiles()
 			int serialflag = 0;
 			memcpy((char*)&serialflag, recvbuf, 4);
 			if (serialflag == -1) {
+#ifdef WIN32
 				cout << "deploy end!" << endl;
+#endif
+#ifdef LINUX
+				cout << "deploy end!" << endl;
+#endif
+#ifdef DVXWORK
+				logMsg("deploy end!\n", 0, 0, 0, 0, 0, 0);
+#endif	
 				break;
 			}
 			long long size = 0;//包的总长度
 			memcpy((char*)&size, (recvbuf + SERINUMLENGTH + PATHLENGTH + MD5LENGTH), 8);
-
 
 			char path[PATHLENGTH];
 			char md5[MD5LENGTH];
@@ -153,7 +165,7 @@ void DeployFiles()
 			memcpy(recvbuf, convertBuf, RecvLen);
 			delete convertBuf;
 #endif
-#ifdef linux
+#ifdef LINUX
 			memcpy(recvbuf, recvbuf1, recvLenTemp);
 			RecvLen = recvLenTemp;
 #endif
@@ -162,9 +174,15 @@ void DeployFiles()
 			RecvLen = recvLenTemp;
 #endif
 			memcpy(path, (recvbuf + SERINUMLENGTH), PATHLENGTH);
+#ifdef WIN32
 			cout << "Start Deploy>>>>>> " << path << endl;
-
-
+#endif
+#ifdef LINUX
+			cout << "Start Deploy>>>>>> " << path << endl;
+#endif
+#ifdef DVXWORK
+			logMsg("Start Deploy>>>>>> %s\n", path, 0, 0, 0, 0, 0);
+#endif	
 			DeployPackageEntity package(0, path, md5);
 			FILE* pFile = fopen(package.targetPath, "r");
 			//如果当前文件不存在，则通知服务器开始发送当前文件的报文
@@ -175,7 +193,6 @@ void DeployFiles()
 				strcpy(requestFlag, "t");
 				send(AcceptSocket, (const char*)requestFlag, strlen(requestFlag), 0);
 				recvFlag = true;
-				//fclose(pFile);
 			}
 			else
 			{
@@ -253,6 +270,21 @@ void DeployFiles()
 				char recvdatabuf[REVBUFSIZE] = { 0 };
 				while (1)
 				{
+					//接收时限
+#ifdef WIN32
+					int nNetTimeout = 1000; //1秒
+					setsockopt(server, SOL_SOCKET, SO_RCVTIMEO, (char *)&nNetTimeout, sizeof(int));
+#endif
+#ifdef LINUX
+					struct timeval timeout = { 10,0 };// 10秒
+					//接收时限
+					setsockopt(server, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(int));
+#endif
+#ifdef DVXWORK
+					struct timeval timeout = { 10,0 };// 10秒
+					//接收时限
+					setsockopt(server, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeval));
+#endif			
 					static int RecvDataLen;
 
 					memset(recvdatabuf, 0, sizeof(recvdatabuf));
@@ -264,7 +296,15 @@ void DeployFiles()
 						if (errorCode == EWOULDBLOCK || errorCode == ETIMEDOUT)
 							continue;
 						else {
+#ifdef WIN32
 							cout << "ERROR>>>>>>>>>>>>>>>>>Client recv error！Has been exit recv_process." << endl;
+#endif
+#ifdef LINUX
+							cout << "ERROR>>>>>>>>>>>>>>>>>Client recv error！Has been exit recv_process." << endl;
+#endif
+#ifdef DVXWORK
+							logMsg("ERROR>>>>>>>>>>>>>>>>>Client recv error！Has been exit recv_process.\n", path, 0, 0, 0, 0, 0);
+#endif	
 							break;
 						}
 					}
@@ -311,7 +351,15 @@ void DeployFiles()
 									strcpy(requestFlag, "c");
 									int realSendLen = send(AcceptSocket, (const char*)requestFlag, strlen(requestFlag), 0);
 									if (realSendLen <= 0) {
+#ifdef WIN32
 										cout << "Send request error" << endl;
+#endif
+#ifdef LINUX
+										cout << "Send request error" << endl;
+#endif
+#ifdef DVXWORK
+										logMsg("Send request error\n", path, 0, 0, 0, 0, 0);
+#endif	
 										break;
 									}
 

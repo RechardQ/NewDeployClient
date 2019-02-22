@@ -26,7 +26,6 @@ int main()
 #ifdef WIN32
 	WSADATA wsa;
 	WSAStartup(MAKEWORD(2, 2), &wsa);
-
 	//启动程序打印当前日期
 	MyTime m_mytime;
 	m_mytime.CoutData();
@@ -38,13 +37,11 @@ int main()
 	g_deployFlag = true;
 	//启动时解析配置文件中的本地IP
 	m_mylog.AnalyzeConfig(hostIP);
-#ifdef WIN32
 	MyThread m_thread;
 	m_thread.FoundHeartThread();
 	m_thread.FoundMulticastThread();
 	m_thread.FoundDeployThread();
 	m_thread.FoundRecvOrderThread();
 	WaitForSingleObject(m_thread.heartThread, INFINITE); // 等待线程结束
-#endif
 	return 0;
 }

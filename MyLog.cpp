@@ -39,6 +39,7 @@ void MyLog::FoundLog(char* sz_floder,char sz_path[])
 
 void MyLog::AnalyzeConfig(char sz_config[])
 {
+#ifdef WIN32
 	FILE* fp = fopen("config.txt", "r");
 	if (fp == NULL)
 	{
@@ -83,6 +84,51 @@ void MyLog::AnalyzeConfig(char sz_config[])
 		}
 		fclose(fp);
 	}
+#endif
+#ifdef LINUX
+	FILE* fp = fopen("config.txt", "r");
+	if (fp == NULL)
+	{
+		printf("cannot find config.txt,the IP use 127.0.0.1\n");
+		writeLog("create scan failed.\n");
+		strcpy(hostIP, "127.0.0.1");
+	}
+	else
+	{
+		char ln[80];
+		fgets(ln, 80, fp);
+		string data = ln;
+		const char* ip;
+		int iPos = data.find("=");
+		data = data.substr(iPos + 1, 14);//截取字符串返回字节数
+		ip = data.c_str();
+		memcpy(hostIP, ip, 15);
+		// printf("host %s\n",hostIP);
+		fclose(fp);
+	}
+#endif
+#ifdef DVXWORK
+	FILE* fp = fopen("config.txt", "r");
+	if (fp == NULL)
+	{
+		printf("cannot find config.txt,the IP use 127.0.0.1\n");
+		writeLog("create scan failed.\n");
+		strcpy(hostIP, "127.0.0.1");
+	}
+	else
+	{
+		char ln[80];
+		fgets(ln, 80, fp);
+		string data = ln;
+		const char* ip;
+		int iPos = data.find("=");
+		data = data.substr(iPos + 1, 14);//截取字符串返回字节数
+		ip = data.c_str();
+		memcpy(hostIP, ip, 15);
+		printf("host %s\n", hostIP);
+		fclose(fp);
+	}
+#endif
 }
 
 void MyLog::WriteLog(const char *buf, char* sz_floder, char sz_config[])
@@ -114,7 +160,6 @@ int MyLog::CreatDir(char *pDir)
 	if (NULL == pDir)
 		return 0;
 
-	//pszDir = strdup(pDir);
 	pszDir = new char[strlen(pDir) + 1];
 	memset(pszDir, 0, strlen(pDir) + 1);
 	memcpy(pszDir, pDir, strlen(pDir));
@@ -157,7 +202,7 @@ int MyLog::my_mkdir(char *pszDir)
 #ifdef WIN32
 	return mkdir(pszDir);
 #endif
-#ifdef linux
+#ifdef LINUX
 	return mkdir(pszDir, S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
 #endif
 #ifdef DVXWORK

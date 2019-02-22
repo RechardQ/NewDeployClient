@@ -8,6 +8,7 @@ char* UnicodeToUTF8(const char* src, int srclen, int &len);
 
 MyLog m_log;
 
+
 // 根据scanPath路径，通过递归扫描类型为scanType的文件，并放于fileList。
 void ScanFiles(char *scanPath, char *scanType, vector<Stru_ScanRets> &fileList)
 {
@@ -70,12 +71,12 @@ void ScanFiles(char *scanPath, char *scanType, vector<Stru_ScanRets> &fileList)
 
 	_findclose(handle);
 #endif
-#ifdef linux
+#ifdef LINUX
 	char dirNew[300];
 	memset(dirNew, 0, 300);
 	strcpy(dirNew, scanPath);
 	DIR *pDir;
-	pDir = opendir(dirNew);		/* Attempt to open directory. */
+	pDir = opendir(dirNew);
 	if (pDir == NULL)
 	{
 		char *buffer = new char[40];
@@ -91,11 +92,13 @@ void ScanFiles(char *scanPath, char *scanType, vector<Stru_ScanRets> &fileList)
 		if ((strcmp(pDirEnt->d_name, ".") == 0) || (strcmp(pDirEnt->d_name, "..") == 0))
 			continue;
 		struct stat fileStat;
-		lstat(pDirEnt->d_name, &fileStat);
-
-		//setbuf(stdout,NULL);
-		//	printf("%s\n",pDirEnt->d_name);
-		//fflush(stdout);
+		char filePath[256];					//文件路径
+		memset(filePath, 0, 256);
+		strcat(filePath, scanPath);
+		strcat(filePath, "/");
+		strcat(filePath, pDirEnt->d_name);
+		// 获得文件属性
+		stat(filePath, &fileStat);
 
 		if (S_ISDIR(fileStat.st_mode)) // 判断是否为文件夹
 		{
@@ -107,20 +110,16 @@ void ScanFiles(char *scanPath, char *scanType, vector<Stru_ScanRets> &fileList)
 		else
 		{
 			// 当前为文件
-			// cout << findData.name << "\t" << findData.size << " bytes.\n";
 			if ((strcmp(scanType, "") == 0) || decFileName(pDirEnt->d_name,
 				scanType) == true)
 			{
 				Stru_ScanRets scanRets;
-				strcat(scanRets.filePath, scanPath); // 锟斤拷锟铰凤拷锟?
-				strcat(scanRets.filePath, "/");
-				strcat(scanRets.filePath, pDirEnt->d_name);
+				strcat(scanRets.filePath, filePath); // 锟斤拷锟铰凤拷锟?
 				// 计算该文件的MD5值
 				MD5_CTX mdvalue;
 				mdvalue.GetFileMd5(scanRets.md5Value, scanRets.filePath);
 				// 将扫描结果放入队列中
 				fileList.push_back(scanRets);
-			}
 		}
 	}
 	closedir(pDir);
@@ -130,7 +129,8 @@ void ScanFiles(char *scanPath, char *scanType, vector<Stru_ScanRets> &fileList)
 	memset(dirNew, 0, 300);
 	strcpy(dirNew, scanPath);
 	DIR *pDir;
-	pDir = opendir(dirNew);		/* Attempt to open directory. */
+	pDir = opendir(dirNew);
+	printf("open dirNew:%s\n", dirNew);
 	if (pDir == NULL)
 	{
 		char *buffer = new char[40];
@@ -146,11 +146,13 @@ void ScanFiles(char *scanPath, char *scanType, vector<Stru_ScanRets> &fileList)
 		if ((strcmp(pDirEnt->d_name, ".") == 0) || (strcmp(pDirEnt->d_name, "..") == 0))
 			continue;
 		struct stat fileStat;
-		lstat(pDirEnt->d_name, &fileStat);
-
-		//setbuf(stdout,NULL);
-		//	printf("%s\n",pDirEnt->d_name);
-		//fflush(stdout);
+		char filePath[256];					//文件路径
+		memset(filePath, 0, 256);
+		strcat(filePath, scanPath);
+		strcat(filePath, "/");
+		strcat(filePath, pDirEnt->d_name);
+		// 获得文件属性
+		stat(filePath, &fileStat);
 
 		if (S_ISDIR(fileStat.st_mode))
 		{
@@ -161,25 +163,21 @@ void ScanFiles(char *scanPath, char *scanType, vector<Stru_ScanRets> &fileList)
 		}
 		else
 		{
-			// 锟斤拷锟斤拷锟斤拷锟侥硷拷
-			// cout << findData.name << "\t" << findData.size << " bytes.\n";
 			if ((strcmp(scanType, "") == 0) || decFileName(pDirEnt->d_name,
 				scanType) == true)
 			{
 				Stru_ScanRets scanRets;
-				strcat(scanRets.filePath, scanPath); // 锟斤拷锟铰凤拷锟?
-				strcat(scanRets.filePath, "/");
-				strcat(scanRets.filePath, pDirEnt->d_name);
-				// 锟斤拷锟斤拷募锟斤拷锟�d5值
+				strcat(scanRets.filePath, filePath);
 				MD5_CTX mdvalue;
-				mdvalue.GetFileMd5(scanRets.md5Value, scanRets.filePath);
-				// 锟斤拷扫锟斤拷锟斤拷息锟斤拷锟诫到锟斤拷锟斤拷锟斤拷
+				printf("get sValue %s\n", scanRets.filePath);
+				bool flag = mdvalue.GetFileMd5(scanRets.md5Value, scanRets.filePath);
+				if (flag == false)
+					continue;
 				fileList.push_back(scanRets);
 			}
 		}
 	}
 	closedir(pDir);
-
 #endif
 }
 
@@ -189,8 +187,7 @@ void SendScanRets(Stru_ScanRetReco retReco)
 {
 #ifdef WIN32
 	WSADATA wsa;
-	WSAStartup(MAKEWORD(2, 2), &wsa); //initial Ws2_32.dll by a process
-
+	WSAStartup(MAKEWORD(2, 2), &wsa);
 #endif
 	int client;
 	bool flag = true;
@@ -236,15 +233,31 @@ void SendScanRets(Stru_ScanRetReco retReco)
 					index += sizeof(retReco.scanRets[i].md5Value);
 				}
 				int ret = send(client, (const char*)sendbuf, len, 0);
+#ifdef WIN32
 				cout << "发送扫描结果成功" << endl;
+#endif
+#ifdef LINUX
+				cout << "发送扫描结果成功" << endl;
+#endif
+#ifdef DVXWORK
+				logMsg("send scanResult\n", 0, 0, 0, 0, 0, 0);
+#endif
+
 				if (ret < 0)
 				{
+#ifdef WIN32
 					cout << "发送扫描结果失败" << endl;
+#endif
+#ifdef LINUX
+					cout << "发送扫描结果失败" << endl;
+#endif
+#ifdef DVXWORK
+					logMsg("send scanResult fail\n", 0, 0, 0, 0, 0, 0);
+#endif
 					//writeLog("send scanRet failed.\n");
 				}
 				delete sendbuf;
 			}
-
 		}
 	}
 #ifdef WIN32
