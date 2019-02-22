@@ -1,8 +1,30 @@
 #include "Header.h"
+#include "MyTime.h"
 
 extern bool g_progFlag;
 extern char serverIP[15];
+MyTime m_time;
 
+
+
+
+//通过进程ID获取进程句柄
+HANDLE GetProcessHandle(int nID)
+{
+	return OpenProcess(PROCESS_ALL_ACCESS, FALSE, nID);
+}
+
+
+int GetProcessMemory(HANDLE handle)
+{
+	PROCESS_MEMORY_COUNTERS pmc;
+	GetProcessMemoryInfo(handle, &pmc, sizeof(pmc));
+	//printf("pid=%d,bytes=%d,kb=%d\n", GetCurrentProcessId(), pmc.WorkingSetSize, int(pmc.WorkingSetSize / 1024));
+	return pmc.WorkingSetSize / 1024;	
+}
+
+
+//获取当前进程的名称、状态
 void GetModuleInfo(char *processID, char *processName, char *priority, char *processMemory, vector<Stru_ModuleRets> &moduleList)
 {
 #ifdef WIN32
@@ -29,16 +51,14 @@ void GetModuleInfo(char *processID, char *processName, char *priority, char *pro
 					count++;
 					if (count == 2)
 					{
-						memset(moduleRets.processName, 0, 128);
+						memset(moduleRets.processName, 0, sizeof(moduleRets.processName));
 						strcpy(moduleRets.processName, temp.substr(1, (subscript - 1)).c_str());
-						temp_count = subscript;
-						//cout << moduleRets.processName << "          ";
+						temp_count = subscript;						
 					}
 					else if (count == 4)
 					{
-						memset(moduleRets.processID, 0, 5);
-						strcpy(moduleRets.processID, temp.substr((temp_count + 3), (subscript - temp_count - 3)).c_str());
-						//cout << moduleRets.processID << "           ";
+						memset(moduleRets.processID, 0, sizeof(moduleRets.processID));
+						strcpy(moduleRets.processID, temp.substr((temp_count + 3), (subscript - temp_count - 3)).c_str());					
 						memset(moduleRets.priority, 0, 8);
 					}
 					else if (count == 8)
@@ -47,21 +67,20 @@ void GetModuleInfo(char *processID, char *processName, char *priority, char *pro
 					}
 					else if (count == 10)
 					{
-						memset(moduleRets.processMemory, 0, 8);
-						strcpy(moduleRets.processMemory, temp.substr((temp_count + 3), (subscript - temp_count - 5)).c_str());
-						for (int i = 0; i <= 7; i++)
-						{
-							if (moduleRets.processMemory[i] == ',')
-							{
-								moduleRets.processMemory[i] = moduleRets.processMemory[i + 1];
-								moduleRets.processMemory[i + 1] = moduleRets.processMemory[i + 2];
-								moduleRets.processMemory[i + 2] = moduleRets.processMemory[i + 3];
-								moduleRets.processMemory[i + 3] = moduleRets.processMemory[i + 4];
-								moduleRets.processMemory[i + 4] = moduleRets.processMemory[i + 5];
-								moduleRets.processMemory[i + 5] = moduleRets.processMemory[i + 6];
-							}
+						memset(moduleRets.processMemory, 0, sizeof(moduleRets.processMemory));
+						int pid = atoi(moduleRets.processID);
+						int c_memory = 0;
+						HANDLE handle = GetProcessHandle(pid);
+						if ((unsigned int)handle == 0) {
+							break;
 						}
-						//cout << moduleRets.processMemory << endl;
+						else
+						{
+							c_memory = GetProcessMemory(handle);
+							char a_memory[8] = { 0 };
+							_itoa(c_memory, a_memory, 8);
+							strcpy(moduleRets.processMemory,a_memory);
+						}
 						moduleList.push_back(moduleRets);
 						subscript = 0;
 						count = 1;
@@ -178,16 +197,21 @@ void SendModuleRets(Stru_ModuleRetReco moduleRet)
 				for (int i = 0; i < moduleRet.taskNum; i++)
 				{
 					memcpy(modulebuf + index, moduleRet.ModuleRets[i].processID, sizeof(moduleRet.ModuleRets[i].processID));
-					cout << "processID " << moduleRet.ModuleRets[i].processID << endl;
+					//cout << "processID " << moduleRet.ModuleRets[i].processID << "        ";
 					index += sizeof(moduleRet.ModuleRets[i].processID);
 					memcpy(modulebuf + index, moduleRet.ModuleRets[i].processName, sizeof(moduleRet.ModuleRets[i].processName));
+					//cout << moduleRet.ModuleRets[i].processName << "           ";
 					index += sizeof(moduleRet.ModuleRets[i].processName);
 					memcpy(modulebuf + index, moduleRet.ModuleRets[i].priority, sizeof(moduleRet.ModuleRets[i].priority));
+					//cout << moduleRet.ModuleRets[i].priority << "          ";
 					index += sizeof(moduleRet.ModuleRets[i].priority);
 					memcpy(modulebuf + index, moduleRet.ModuleRets[i].processMemory, sizeof(moduleRet.ModuleRets[i].processMemory));
+					//cout << moduleRet.ModuleRets[i].processMemory << endl;
 					index += sizeof(moduleRet.ModuleRets[i].processMemory);
 				}
+				//m_time.CoutTime();
 				int ret = send(client, (const char*)modulebuf, len, 0);
+				//m_time.CoutTime();
 				cout << "发送进程信息成功" << endl;
 
 				if (ret < 0)
@@ -204,7 +228,6 @@ void SendModuleRets(Stru_ModuleRetReco moduleRet)
 #ifdef WIN32
 	closesocket(client);
 	WSACleanup();
-	//Sleep(29000);
 #endif
 #ifdef linux
 	close(client);
